@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.TemporalAdjuster;
 import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 
@@ -136,7 +135,6 @@ public class ExamineServiceImpl implements ExamineService {
     @Override
     public void cancelOneCombo(String phoneNumber, Integer comboId, boolean nextMonth) {
 
-        startTime = System.currentTimeMillis(); // 获取开始时间
         User user = getValidUser(phoneNumber);
         Combo combo = getValidCombo(comboId);
         List<ComboUsedRecord> comboUsedRecords = comboRecordRepository.findAllByUserAndCombo(user,combo);
@@ -150,8 +148,6 @@ public class ExamineServiceImpl implements ExamineService {
                     cancelCurrentMonth(comboUsedRecords.get(i));
                 }
 
-                System.out.println("用户"+phoneNumber+"已成功退订"+comboRepository.findByComboId(comboId).get().getComboName()+"(次月生效)");
-                System.out.println();
                 printRunTime();
                 return;
             }
@@ -283,35 +279,71 @@ public class ExamineServiceImpl implements ExamineService {
         comboRecordRepository.save(record);
         endTime = System.currentTimeMillis(); // 获取结束时间
 
+        System.out.println("用户"+record.getUser().getPhoneNumber()+"已成功退订"+comboRepository.findByComboId(record.getId()).get().getComboName()+"(次月生效)");
+        System.out.println();
+
     }
 
     private void cancelCurrentMonth(ComboUsedRecord record){
         //退订当月生效
         LocalDateTime nowDateTime = LocalDateTime.now();
+        LocalDateTime[] result = getFirstAndLastDay(nowDateTime);
+
+        LocalDateTime first = result[0];
+        LocalDateTime last = result[1];
+
+        startTime = System.currentTimeMillis();
+
         record.setEndDateTime(nowDateTime.minusMonths(1).with(TemporalAdjusters.lastDayOfMonth()));
         comboRecordRepository.save(record);
 
-        Combo combo= record.getCombo();
-        
-    }
+        int comboId= record.getCombo().getId();
+        User user = record.getUser();
+        List<CallRecord> callRecords = callRecordRepository.findByUserAndStartDateTimeBetween(user, first, last);
+        List<MessageRecord> messageRecords = messageRecordRepository.findByUserAndStartDateTimeBetween(user, first, last);
+        List<DataRecord> localDataRecords = dataRecordRepository.findByUserAndDataTypeAndStartDateTimeBetween(user, DataType.LOCAL_DATA, first, last);
+        List<DataRecord> domesticDataRecords = dataRecordRepository.findByUserAndDataTypeAndStartDateTimeBetween(user, DataType.DOMESTIC_DATA, first, last);
 
-    public void setMessageRecord(String phoneNumber, int num){
-        for(int i=0;i<num;i++){
-            LocalDateTime nowDateTime = LocalDateTime.now();
-            User user = getValidUser(phoneNumber);
-            double expense = getOneMessageExpense(user);
-            MessageRecord record = new MessageRecord(user,nowDateTime,expense);
-            messageRecordRepository.save(record);
+        for(int i = 0; i < callRecords.size(); i++){
+            setOneCallExpense(user, callRecords.get(i).getMinutes(), callRecords.get(i));
         }
+
+        for(int i = 0; i < messageRecords.size(); i++){
+            setOneMessageExpense(user, messageRecords.get(i));
+        }
+
+        for(int i = 0; i < localDataRecords.size(); i++){
+            setOneTimeDataExpense(user, localDataRecords.get(i).getAmount(), DataType.LOCAL_DATA, localDataRecords.get(i));
+        }
+
+        for(int i = 0; i < domesticDataRecords.size(); i++){
+            setOneTimeDataExpense(user, domesticDataRecords.get(i).getAmount(), DataType.DOMESTIC_DATA, domesticDataRecords.get(i));
+        }
+
+        System.out.println("用户"+record.getUser().getPhoneNumber()+"已成功退订"+record.getCombo().getComboName()+"(当月生效)");
+        System.out.println();
+
+        endTime = System.currentTimeMillis();
+
     }
 
     public void setCallRecord(String phoneNumber, int calls, int minute){
         for(int i = 0; i< calls; i++){
             LocalDateTime nowDateTime = LocalDateTime.now();
             User user = getValidUser(phoneNumber);
-            double expense = getOneCallExpense(user, minute);
-            CallRecord record = new CallRecord(user, nowDateTime, minute, expense);
+            CallRecord record = new CallRecord(user, nowDateTime, minute, null);
             callRecordRepository.save(record);
+            setOneCallExpense(user, minute, record);
+        }
+    }
+
+    public void setMessageRecord(String phoneNumber, int num){
+        for(int i=0;i<num;i++){
+            LocalDateTime nowDateTime = LocalDateTime.now();
+            User user = getValidUser(phoneNumber);
+            MessageRecord record = new MessageRecord(user,nowDateTime,null);
+            messageRecordRepository.save(record);
+            setOneMessageExpense(user, record);
         }
     }
 
@@ -319,13 +351,13 @@ public class ExamineServiceImpl implements ExamineService {
         for(int i = 0; i < num; i++){
             LocalDateTime nowDateTime = LocalDateTime.now();
             User user = getValidUser(phoneNumber);
-            double expense = getOneTimeDataExpense(user, amount, type);
-            DataRecord record = new DataRecord(user, nowDateTime, amount ,type, expense);
+            DataRecord record = new DataRecord(user, nowDateTime, amount ,type, null);
             dataRecordRepository.save(record);
+            setOneTimeDataExpense(user, amount, type, record);
         }
     }
 
-    private double getOneMessageExpense(User user){
+    private void setOneMessageExpense(User user, MessageRecord record){
 
         int max = 200;
 
@@ -349,18 +381,19 @@ public class ExamineServiceImpl implements ExamineService {
         Boolean haveCombo = isHaveTheCombo(user,combo3,nowDateTime);
         if(haveCombo){
             // 有短信套餐
-            if(count < max){
-                return 0;
+            if(count <= max){
+                record.setExpense(0.0);
             }else{
-                return 0.1;
+                record.setExpense(0.1);
             }
         }else{
             //没有短信套餐
-            return 0.1;
+            record.setExpense(0.1);
         }
+        messageRecordRepository.save(record);
     }
 
-    private double getOneCallExpense(User user, int minute){
+    private void setOneCallExpense(User user, int minute, CallRecord record){
         int max = 100;
         LocalDateTime nowDateTime = LocalDateTime.now();
         LocalDateTime[] result = getFirstAndLastDay(nowDateTime);
@@ -386,23 +419,25 @@ public class ExamineServiceImpl implements ExamineService {
         Boolean haveCombo = isHaveTheCombo(user, combo2, nowDateTime);
 
         if(haveCombo){
-            if(countMinute >= max){
-                return minute * 0.5;
-            }else if(countMinute + minute <= max){
-                return 0;
+            if(countMinute - minute >= max){
+                record.setExpense(minute * 0.5);
+            }else if(countMinute <= max){
+                record.setExpense(0.0);
             }else{
-                int a = max - countMinute;
+                int a = max - (countMinute - minute);
                 int b = minute - a;
-                return b * 0.5;
+                record.setExpense(b * 0.5);
             }
         }else{
-            return minute * 0.5;
+            record.setExpense(minute * 0.5);
         }
+
+        callRecordRepository.save(record);
     }
 
-    private double getOneTimeDataExpense(User user,double amount, DataType type){
+    private void setOneTimeDataExpense(User user,double amount, DataType type, DataRecord record){
 
-        int max1 = 2 * 1024, max2 = 2 * 1024;
+        int max1 = 2 * 1024, max2 = 3 * 1024;
 
         LocalDateTime nowDateTime = LocalDateTime.now();
         LocalDateTime[] result = getFirstAndLastDay(nowDateTime);
@@ -440,17 +475,17 @@ public class ExamineServiceImpl implements ExamineService {
         if(type.equals(DataType.LOCAL_DATA)){
             if(haveLocalData){
                 //有本地流量套餐
-                if(amountOfAll1 > max1){
+                if(amountOfAll1 - amount >= max1){
                     if(haveDomesticData){
                         // 且有全国流量套餐
-                        if(amountOfAll2 > max2){
-                            return amount * 2;
+                        if(amountOfAll2 >= max2){
+                            record.setExpense(amount * 2);
                         }else if(amountOfAll2 + amount <= max2){
-
                             //将使用的全国流量套餐记录到数据库中
                             DataRecord newDomesticRecord = new DataRecord(user, nowDateTime, amount, DataType.DOMESTIC_DATA, 0.0);
                             dataRecordRepository.save(newDomesticRecord);
-                            return 0;
+                            record.setExpense(0.0);
+                            record.setAmount(0.0);
                         }else{
                             double a = max2 - amountOfAll2;
                             double b = amount - a;
@@ -459,32 +494,63 @@ public class ExamineServiceImpl implements ExamineService {
                             DataRecord newDomesticRecord = new DataRecord(user, nowDateTime, a, DataType.DOMESTIC_DATA, 0.0);
                             dataRecordRepository.save(newDomesticRecord);
 
-                            return b * 2;
+                            record.setExpense(b * 2);
+                            record.setAmount(b);
                         }
                     }else{
-                        return amount * 2;
+                        record.setExpense(amount * 2);
                     }
+                }else if(amountOfAll1 <= max1){
+                    record.setExpense(0.0);
+                }else{
+                    double a = max1 - (amountOfAll1 - amount);
+                    double b = amount - a;
+
+                    if(haveDomesticData){
+                        if(amountOfAll2 > max2){
+                            record.setExpense(b * 2);
+                        }else if(amountOfAll2 + b <= max2){
+                            //将使用的全国流量套餐记录到数据库中
+                            DataRecord newDomesticRecord = new DataRecord(user, nowDateTime, b, DataType.DOMESTIC_DATA, 0.0);
+                            dataRecordRepository.save(newDomesticRecord);
+                            record.setExpense(0.0);
+                            record.setAmount(a);
+                        }else{
+                            double c = max2 - amountOfAll2;
+                            double d = b - c;
+
+                            //将使用的全国流量套餐记录到数据库中
+                            DataRecord newDomesticRecord = new DataRecord(user, nowDateTime, c, DataType.DOMESTIC_DATA, 0.0);
+                            dataRecordRepository.save(newDomesticRecord);
+
+                            record.setExpense(d * 2);
+                            record.setAmount(d);
+                        }
+                    }else{
+                        record.setExpense(b * 2);
+                    }
+
                 }
             }else{
-                return amount * 2;
+                record.setExpense(amount * 2);
             }
         }else if(type.equals(DataType.DOMESTIC_DATA)){
             if(haveDomesticData){
-                if(amountOfAll2 > max2){
-                    return amount * 5;
-                }else if(amountOfAll2 + amount <= max2){
-                    return 0;
+                if(amountOfAll2 - amount > max2){
+                    record.setExpense(amount * 5);
+                }else if(amountOfAll2 <= max2){
+                    record.setExpense(0.0);
                 }else {
-                    double a = max2 - amountOfAll2;
+                    double a = max2 - (amountOfAll2 - amount);
                     double b = amount - a;
-                    return b * 5;
+                    record.setExpense(b * 5);
                 }
             }else {
-                return amount * 5;
+                record.setExpense(amount * 5);
             }
         }
 
-        return 0;
+        dataRecordRepository.save(record);
     }
 
     private LocalDateTime[] getFirstAndLastDay(LocalDateTime nowDate){

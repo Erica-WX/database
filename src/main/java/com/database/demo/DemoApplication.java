@@ -21,12 +21,24 @@ public class DemoApplication {
 
 		String phoneNumber = "18251838318";
 
-		//examineService.setMessageRecord(phoneNumber,101);
+		/**
+		 * 插入202条短信
+		 */
+		//examineService.setMessageRecord(phoneNumber,202);
 
+		/**
+		 * 插入6条通话记录，每条时间为20min
+		 */
 		//examineService.setCallRecord(phoneNumber,6,20);
 
-		//examineService.setDataRecord(phoneNumber, 10,100, DataType.DOMESTIC_DATA);
+		/**
+		 * 插入10次国内流量使用情况，每次使用200M
+		 */
+		//examineService.setDataRecord(phoneNumber, 10,200, DataType.DOMESTIC_DATA);
 
+		/**
+		 * 插入5次本地流量使用情况，每次使用5000M
+		 */
 		//examineService.setDataRecord(phoneNumber, 5,1000, DataType.LOCAL_DATA);
 
 		/*--------上面是插入数据行为，下面是查询操作--------*/
@@ -34,7 +46,7 @@ public class DemoApplication {
 		/**
 		 * 订购套餐
 		 */
-		//examineService.setNewCombo(phoneNumber,5,3);
+		//examineService.setNewCombo(phoneNumber,3,3);
 
 		/**
 		 * 退订套餐（次月生效）
@@ -59,7 +71,7 @@ public class DemoApplication {
 		/**
 		 * 月账单查询
 		 */
-		//examineService.getMonthBill(phoneNumber);
+		examineService.getMonthBill(phoneNumber);
 
 
 		/**
