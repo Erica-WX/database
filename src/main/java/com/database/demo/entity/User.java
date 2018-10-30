@@ -7,6 +7,11 @@ import org.springframework.lang.NonNull;
 import javax.persistence.*;
 import java.util.Set;
 
+/**
+ * @author: 王轩
+ * @description
+ * @date: 2018/10/30
+ */
 @Entity
 public class User {
 
@@ -14,19 +19,19 @@ public class User {
     @NotNull
     private String phoneNumber;
 
-    @OneToMany(cascade={CascadeType.ALL},fetch=FetchType.LAZY)
+    @OneToMany(cascade={CascadeType.MERGE},fetch=FetchType.LAZY)
     @JoinColumn(name="phoneNumber")
     private Set<CallRecord> callRecordSet;
 
-    @OneToMany(cascade={CascadeType.ALL},fetch=FetchType.LAZY)
+    @OneToMany(cascade={CascadeType.MERGE},fetch=FetchType.LAZY)
     @JoinColumn(name="phoneNumber")
     private Set<MessageRecord> messageRecordSet;
 
-    @OneToMany(cascade={CascadeType.ALL},fetch=FetchType.LAZY)
+    @OneToMany(cascade={CascadeType.MERGE},fetch=FetchType.LAZY)
     @JoinColumn(name="phoneNumber")
     private Set<DataRecord> dataRecordSet;
 
-    @OneToMany(cascade={CascadeType.ALL},fetch=FetchType.LAZY)
+    @OneToMany(cascade={CascadeType.MERGE},fetch=FetchType.LAZY)
     @JoinColumn(name="phoneNumber")
     private Set<ComboUsedRecord> comboUsedRecordSet;
 

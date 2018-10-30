@@ -3,7 +3,13 @@ package com.database.demo.entity;
 import com.sun.istack.internal.NotNull;
 
 import javax.persistence.*;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+/**
+ * @author: 王轩
+ * @description
+ * @date: 2018/10/30
+ */
 
 @Entity
 public class DataRecord {
@@ -13,16 +19,29 @@ public class DataRecord {
     private Integer id;
 
     @NotNull
-    @ManyToOne(cascade={CascadeType.ALL}, fetch=FetchType.EAGER)
+    @ManyToOne(cascade={CascadeType.MERGE}, fetch=FetchType.EAGER)
     @JoinColumn(name="phoneNumber",referencedColumnName="phoneNumber") // 外键设置为phoneNumber
     private User user;
 
-    private LocalDate startDateTime;
+    private LocalDateTime startDateTime;
 
     private Double amount; //使用流量的兆数
 
     @Enumerated(value = EnumType.STRING)
     private DataType dataType; //流量类型
+
+    private Double expense;
+
+    public DataRecord() {
+    }
+
+    public DataRecord(User user, LocalDateTime startDateTime, Double amount, DataType dataType, Double expense) {
+        this.user = user;
+        this.startDateTime = startDateTime;
+        this.amount = amount;
+        this.dataType = dataType;
+        this.expense = expense;
+    }
 
     public Integer getId() {
         return id;
@@ -40,11 +59,11 @@ public class DataRecord {
         this.user = user;
     }
 
-    public LocalDate getStartDateTime() {
+    public LocalDateTime getStartDateTime() {
         return startDateTime;
     }
 
-    public void setStartDateTime(LocalDate startDateTime) {
+    public void setStartDateTime(LocalDateTime startDateTime) {
         this.startDateTime = startDateTime;
     }
 
@@ -62,5 +81,13 @@ public class DataRecord {
 
     public void setDataType(DataType dataType) {
         this.dataType = dataType;
+    }
+
+    public Double getExpense() {
+        return expense;
+    }
+
+    public void setExpense(Double expense) {
+        this.expense = expense;
     }
 }

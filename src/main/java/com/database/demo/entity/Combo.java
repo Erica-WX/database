@@ -3,6 +3,12 @@ package com.database.demo.entity;
 import javax.persistence.*;
 import java.util.Set;
 
+/**
+ * @author: 王轩
+ * @description
+ * @date: 2018/10/30
+ */
+
 @Entity
 public class Combo {
 

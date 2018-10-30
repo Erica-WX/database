@@ -4,6 +4,13 @@ import com.sun.istack.internal.NotNull;
 
 import javax.persistence.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+/**
+ * @author: 王轩
+ * @description
+ * @date: 2018/10/30
+ */
 
 @Entity
 public class ComboUsedRecord {
@@ -13,17 +20,27 @@ public class ComboUsedRecord {
     private Integer id;
 
     @NotNull
-    @ManyToOne(cascade={CascadeType.ALL}, fetch=FetchType.EAGER)
+    @ManyToOne(cascade={CascadeType.MERGE}, fetch=FetchType.EAGER)
     @JoinColumn(name="phoneNumber",referencedColumnName="phoneNumber") // 外键设置为phoneNumber
     private User user;
 
-    @ManyToOne(cascade={CascadeType.ALL}, fetch=FetchType.EAGER)
+    @ManyToOne(cascade={CascadeType.MERGE}, fetch=FetchType.EAGER)
     @JoinColumn(name="comboId",referencedColumnName="comboId") // 外键设置为套餐id
     private Combo combo;
 
-    private LocalDate startDateTime;
+    private LocalDateTime startDateTime;
 
-    private LocalDate endDateTime;
+    private LocalDateTime endDateTime;
+
+    public ComboUsedRecord() {
+    }
+
+    public ComboUsedRecord(User user, Combo combo, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        this.user = user;
+        this.combo = combo;
+        this.startDateTime = startDateTime;
+        this.endDateTime = endDateTime;
+    }
 
     public Integer getId() {
         return id;
@@ -49,19 +66,19 @@ public class ComboUsedRecord {
         this.combo = combo;
     }
 
-    public LocalDate getStartDateTime() {
+    public LocalDateTime getStartDateTime() {
         return startDateTime;
     }
 
-    public void setStartDateTime(LocalDate startDateTime) {
+    public void setStartDateTime(LocalDateTime startDateTime) {
         this.startDateTime = startDateTime;
     }
 
-    public LocalDate getEndDateTime() {
+    public LocalDateTime getEndDateTime() {
         return endDateTime;
     }
 
-    public void setEndDateTime(LocalDate endDateTime) {
+    public void setEndDateTime(LocalDateTime endDateTime) {
         this.endDateTime = endDateTime;
     }
 }
